@@ -213,6 +213,23 @@ MIT — free to use and modify.
 
 ---
 
+## Skills & technologies
+
+`Arduino/C++`
+
+
+## Repository structure
+
+Key files and folders (not exhaustive):
+
+- `README.md`
+- `rfid-access-control-final.tar.gz`
+- `rfid-access-control.tar.gz`
+- `rfid_access_control (1).ino`
+- `rfid_access_control (2).ino`
+- `rfid_motor_control.ino`
+
+
 ## Maintenance & Audit
 
 - **Audit date:** 10 November 2026
