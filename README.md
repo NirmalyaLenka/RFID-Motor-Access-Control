@@ -1,239 +1,115 @@
 # RFID Motor Access Control
- 
-Control a DC motor and LED indicators based on RFID card authorization.
- 
-- ✅ **Authorized card** → Motor spins **clockwise** + 🟢 Green LED ON
-- ❌ **Unauthorized card** → Motor stops + 🔴 Red LED ON
----
- 
-## Hardware Required
- 
-| Component | Quantity |
-|-----------|----------|
-| Arduino Uno / Nano | 1 |
-| RC522 RFID Module | 1 |
-| MIFARE Card or Key Fob | 1+ |
-| L298N Motor Driver Module | 1 |
-| DC Motor (5–12 V) | 1 |
-| Green LED | 1 |
-| Red LED | 1 |
-| 220Ω Resistor | 2 |
-| Jumper Wires | several |
-| 9–12 V Power Supply (for motor) | 1 |
- 
----
- 
-## Wiring
- 
-### RC522 RFID → Arduino
- 
-| RC522 Pin | Arduino Pin |
-|-----------|-------------|
-| SDA       | D10         |
-| SCK       | D13         |
-| MOSI      | D11         |
-| MISO      | D12         |
-| RST       | D3          |
-| 3.3V      | 3.3V        |
-| GND       | GND         |
- 
-> ⚠️ RC522 runs on **3.3 V only**. Connecting to 5 V will damage it.
- 
-### L298N Motor Driver → Arduino
- 
-| L298N Pin | Arduino Pin | Notes |
-|-----------|-------------|-------|
-| IN1       | D7          | Direction control |
-| IN2       | D8          | Direction control |
-| ENA       | D9          | PWM speed control |
-| GND       | GND         | Common ground |
-| 12V       | External PSU| Motor power supply |
- 
-> Connect the motor to the **OUT1 / OUT2** terminals on the L298N.
- 
-### LEDs → Arduino
- 
-| Component  | Arduino Pin | Via |
-|------------|-------------|-----|
-| Green LED (+) | D4 | 220Ω resistor |
-| Red LED (+)   | D5 | 220Ω resistor |
-| Both LED (–)  | GND | direct |
- 
----
- 
-## Wiring Diagram (ASCII)
- 
-```
-Arduino                RC522
-   D10 ──────────────── SDA
-   D13 ──────────────── SCK
-   D11 ──────────────── MOSI
-   D12 ──────────────── MISO
-   D3  ──────────────── RST
-   3V3 ──────────────── 3.3V
-   GND ──────────────── GND
- 
-Arduino                L298N
-   D7  ──────────────── IN1
-   D8  ──────────────── IN2
-   D9  ──────────────── ENA
-   GND ──────────────── GND
-   
-   12V PSU ──────────── 12V (motor power)
-   Motor ─────────────── OUT1 / OUT2
- 
-Arduino                LEDs
-   D4  ── 220Ω ── Green LED (+) ── GND
-   D5  ── 220Ω ── Red LED (+)   ── GND
-```
- 
----
- 
-## Software Setup
- 
-### 1. Install Library
- 
-Open **Arduino IDE → Sketch → Include Library → Manage Libraries**
- 
-Search for: `MFRC522` by **GithubCommunity** → Install
- 
-### 2. Find Your Card UID
- 
-Before adding authorized cards, you need their UID. Open Serial Monitor at **9600 baud**, tap your card — the UID prints automatically:
- 
-```
-Card UID:  DE AD BE EF
-```
- 
-### 3. Add Authorized UIDs
- 
-Edit this section in the sketch:
- 
+
+Arduino RFID prototype that reads an MFRC522 card UID and, in the primary sketch, runs a DC motor through an L298N driver for a fixed interval when the UID matches an allow-list. This repository contains **three different sketches**; their pin assignments and hardware features are not interchangeable.
+
+## Choose the sketch first
+
+| File | Implemented behavior | Important distinction |
+|---|---|---|
+| `rfid_motor_control.ino` | MFRC522 reader, UID allow-list, red/green LEDs, L298N motor direction and PWM, timed motor stop | **Primary sketch for the motor-driver wiring below.** No OLED or buzzer. |
+| `rfid_access_control (1).ino` | MFRC522, SSD1306 OLED, buzzer, red/green LEDs, separate allowed and denied UID lists | Does not control a motor. Uses RC522 RST on D9 and OLED I²C on A4/A5. |
+| `rfid_access_control (2).ino` | Same OLED/buzzer/LED arrangement plus a single motor-control output | Uses D5 as a HIGH/LOW motor-driver control signal; it does not implement the L298N direction/PWM mapping used by the primary sketch. |
+
+Do not upload one sketch while following another sketch's pin table. The two OLED sketches also contain hard-coded example UIDs; inspect and replace them before use.
+
+## Hardware for the primary sketch
+
+- Arduino Uno or compatible board with the standard SPI pins
+- MFRC522/RC522 RFID reader and compatible card/tag
+- L298N motor driver and a DC motor
+- Separate motor power supply suitable for the motor and driver
+- One green LED and one red LED, each with a current-limiting resistor
+- Jumper wires and a breadboard or suitable connections
+
+The RC522 is a **3.3 V device**. Do not connect its VCC to 5 V. Check the specific breakout board's logic-level requirements as well.
+
+## Wiring: `rfid_motor_control.ino`
+
+### RC522 to Arduino
+
+| RC522 | Arduino Uno |
+|---|---|
+| SDA / SS | D10 |
+| SCK | D13 |
+| MOSI | D11 |
+| MISO | D12 |
+| RST | D3 |
+| VCC | 3.3 V |
+| GND | GND |
+| IRQ | Not connected |
+
+### L298N and indicators
+
+| Signal | Arduino / supply |
+|---|---|
+| IN1 | D7 |
+| IN2 | D8 |
+| ENA | D9 (PWM) |
+| Driver GND | Arduino GND (common ground) |
+| Driver motor supply | External supply appropriate for the motor/driver |
+| Motor terminals | L298N OUT1 and OUT2 |
+| Green LED anode | D4 through a 220 Ω resistor |
+| Red LED anode | D5 through a 220 Ω resistor |
+| LED cathodes | GND |
+
+Never power a motor directly from an Arduino GPIO. Keep the motor supply disconnected while wiring, verify the driver module's power-jumper instructions, and ensure the mechanism can move safely before testing. The motor's direction depends on the actual motor and output wiring.
+
+## Software setup and upload
+
+1. Install the Arduino IDE.
+2. In **Library Manager**, install **MFRC522** by GithubCommunity.
+3. Open `rfid_motor_control.ino` from the repository root.
+4. Select the actual board and serial port in **Tools**.
+5. Upload the sketch and open Serial Monitor at **9600 baud**.
+6. Scan a card and read its UID from the serial output.
+7. Replace the placeholder values in `AUTHORIZED_UIDS` with the exact four UID bytes for cards you intend to allow, then upload again.
+
+The primary sketch defines:
+
 ```cpp
-const byte AUTHORIZED_UIDS[][4] = {
-  { 0xDE, 0xAD, 0xBE, 0xEF },   // ← your card UID here
-  { 0xAA, 0xBB, 0xCC, 0xDD },   // ← add more as needed
-};
+#define MOTOR_SPEED    200   // PWM value: 0–255
+#define MOTOR_RUN_TIME 5000  // milliseconds
 ```
- 
-Replace placeholder values with your card's actual UID bytes.
- 
-### 4. Adjust Settings (optional)
- 
-```cpp
-#define MOTOR_SPEED    200   // Motor PWM speed (0–255)
-#define MOTOR_RUN_TIME 5000  // How long motor runs after tap (ms)
-```
- 
-### 5. Upload
- 
-Select your board (**Tools → Board → Arduino Uno**) and port, then upload.
- 
----
- 
-## How It Works
- 
-```
-Card Tap
-   │
-   ├── UID in list?
-   │       │
-   │      YES → Green LED ON
-   │             Motor spins CW for MOTOR_RUN_TIME ms
-   │             Motor auto-stops after timeout
-   │
-   └──     NO → Red LED ON for 2 seconds
-                Motor stays OFF
-```
- 
-The loop is **non-blocking** — the motor timeout uses `millis()`, so the RFID reader stays responsive at all times.
- 
----
- 
-## Serial Monitor Output
- 
-```
-RFID Motor Access Control Ready
-Tap a card...
-Card UID:  DE AD BE EF
-ACCESS GRANTED – Motor CW, Green LED ON
-Motor stopped. Tap card again.
- 
-Card UID:  11 22 33 44
-ACCESS DENIED  – Red LED ON
-```
- 
----
- 
-## Pin Summary
- 
-| Pin | Function |
-|-----|----------|
-| D3  | RC522 RST |
-| D4  | Green LED |
-| D5  | Red LED |
-| D7  | L298N IN1 |
-| D8  | L298N IN2 |
-| D9  | L298N ENA (PWM) |
-| D10 | RC522 SDA/SS |
-| D11 | SPI MOSI |
-| D12 | SPI MISO |
-| D13 | SPI SCK |
- 
----
- 
-## Extending the Project
- 
-| Feature | How |
-|---------|-----|
-| Add buzzer | `tone(BUZZER_PIN, 1000, 200)` on grant/deny |
-| OLED feedback | Wire SSD1306 on I2C (A4/A5), use `Adafruit_SSD1306` |
-| Counter-clockwise mode | Set IN1=LOW, IN2=HIGH in a second function |
-| 7-byte UID cards | Change array size to `[][7]` and `uidSize != 7` check |
-| Multiple access levels | Map UIDs to speed/duration levels |
- 
----
- 
+
+Change these only after confirming the motor and driver are appropriate for the application. The current authorization function accepts **four-byte UIDs only**; seven-byte tags are not supported by this sketch as written.
+
+## How the primary sketch behaves
+
+1. The reader detects a card and prints its UID to Serial Monitor.
+2. The UID is compared with the hard-coded allow-list.
+3. A match turns on the green LED and drives the L298N in one direction.
+4. The motor stops after `MOTOR_RUN_TIME`; the timeout is checked using `millis()`.
+5. A non-matching UID turns on the red LED for about two seconds and does not start the motor.
+
+This is an educational prototype, not a security-grade access-control product. RFID UIDs can be copied, the allow-list is stored in firmware, and scanned UIDs are printed to the serial console. Do not use this alone to protect property or safety-critical equipment.
+
+## Repository contents
+
+- `rfid_motor_control.ino` — primary L298N motor-control sketch
+- `rfid_access_control (1).ino` — OLED/buzzer/LED variant without motor control
+- `rfid_access_control (2).ino` — OLED/buzzer/LED variant with a single motor-control output
+- `rfid-access-control.tar.gz` and `rfid-access-control-final.tar.gz` — checked-in archive files; their contents have not been extracted or audited in this review
+- `README.md` — this guide
+
 ## Troubleshooting
- 
-| Problem | Fix |
-|---------|-----|
-| Card not detected | Check SPI wiring; ensure 3.3V power to RC522 |
-| Motor doesn't spin | Check ENA PWM pin; verify 12V supply on L298N |
-| Motor spins wrong way | Swap IN1/IN2 or swap motor wire connections |
-| LED not lighting | Verify resistor and correct pin; check LED polarity |
-| UID always denied | Print UID to Serial and update `AUTHORIZED_UIDS` array |
- 
----
- 
-## License
- 
-MIT — free to use and modify.
 
+| Symptom | Checks |
+|---|---|
+| Reader is not detected | Confirm 3.3 V power, SPI wiring, SS on D10, RST on D3 for the primary sketch, and library installation. |
+| All cards are denied | Compare the complete UID printed in Serial Monitor with the four bytes in `AUTHORIZED_UIDS`. |
+| Motor does not run | Confirm the correct sketch is uploaded, the external motor supply is present, driver wiring is correct, and grounds are common. |
+| Motor runs in the opposite direction | Power down and check motor leads and IN1/IN2 wiring; direction depends on the physical wiring. |
+| OLED sketch stops during startup | Check the SSD1306 I²C wiring and address (the sketch uses 0x3C); the OLED variants have a different pin map. |
 
----
+## License and verification status
 
-## Skills & technologies
+No conventional root-level `LICENSE` file is present in the current repository tree, so redistribution terms are not established by the tracked root files. Verify licensing before reusing or distributing the project.
 
-`Arduino/C++`
-
-
-## Repository structure
-
-Key files and folders (not exhaustive):
-
-- `README.md`
-- `rfid-access-control-final.tar.gz`
-- `rfid-access-control.tar.gz`
-- `rfid_access_control (1).ino`
-- `rfid_access_control (2).ino`
-- `rfid_motor_control.ino`
-
+Documentation was reviewed against the three visible sketches and root file list. No compilation, upload, reader, motor, or OLED hardware test was performed.
 
 ## Maintenance & Audit
 
 - **Audit date:** 11 November 2026
-- **Documentation status:** README reviewed and audit record added on this date.
-- **Scope and evidence:** This is a documentation-level maintenance pass. It does not establish that source code compiles, dependencies are current, security has been tested, or hardware/runtime behavior has been verified.
-- **Code and tests:** No new functional code changes or test results are claimed by this README update. Run project-specific build, test, and hardware/runtime checks before relying on the project.
-- **Maintenance baseline:** Documentation status recorded through 11 November 2026; revisit setup instructions, dependencies, known limitations, and tests when the project changes.
+- **Documentation status:** README reviewed; the three sketch variants and their different wiring requirements are now distinguished.
+- **Verification boundary:** Documentation was compared with the checked-in text files. No build, security, or hardware result is claimed.
+- **Known limitations:** UID-only authorization is cloneable; only the primary sketch has the documented L298N PWM/direction control and timed stop.
