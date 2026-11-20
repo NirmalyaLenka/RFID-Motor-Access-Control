@@ -109,7 +109,7 @@ Documentation was reviewed against the three visible sketches and root file list
 
 ## Maintenance & Audit
 
-- **Audit date:** 11 November 2026
+- **Audit date:** 20 November 2026
 - **Documentation status:** README reviewed; the three sketch variants and their different wiring requirements are now distinguished.
 - **Verification boundary:** Documentation was compared with the checked-in text files. No build, security, or hardware result is claimed.
 - **Known limitations:** UID-only authorization is cloneable; only the primary sketch has the documented L298N PWM/direction control and timed stop.
